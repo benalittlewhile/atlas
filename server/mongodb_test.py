@@ -1,3 +1,5 @@
+# requires pymongo and pymongo[srv]
+
 from pymongo import MongoClient
 # pprint library is used to make the output look more pretty
 from pprint import pprint
