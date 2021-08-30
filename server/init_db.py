@@ -31,7 +31,5 @@ for paragraph in types.split("}"):
             col=db[new_col]
             exampleData = {
                 'example': 1
-            #$     'nationality': 'yes',
-            #     'type': 'town', 
             }
             col.insert_one(exampleData)       
