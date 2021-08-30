@@ -1,7 +1,7 @@
 export interface Pin {
-  UID: number; // = db index or whatever
   name: string;
   latlangcoord: any; //TODO: fix this, needs to use the actual type
+  category: string;
   timeStart: number;
   timeEnd: number;
   visible: boolean;
@@ -11,6 +11,11 @@ export interface Pin {
   relatedPlaces: Place[];
   description: string;
   misc: string;
+}
+
+export interface Link extends Pin {
+  pointA: Pin;
+  pointB: Pin;
 }
 
 export interface Person extends Pin {
