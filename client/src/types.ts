@@ -2,6 +2,7 @@ export interface Pin {
   UID: number; // = db index or whatever
   name: string;
   latlangcoord: any; //TODO: fix this, needs to use the actual type
+  category: string;
   timeStart: number;
   timeEnd: number;
   visible: boolean;
@@ -36,5 +37,4 @@ export interface Thing extends Pin {
 
 export interface Place extends Pin {
   nationality: string; // maybe enum?
-  type: string; // e.g town/city, road, mountain, etc.
 }
