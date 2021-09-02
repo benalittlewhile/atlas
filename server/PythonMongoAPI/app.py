@@ -11,7 +11,12 @@ app.config["DEBUG"] = True
 # set up the database access
 client = MongoClient("mongodb+srv://admin:atlasadmin1@cluster0.cwe5c.mongodb.net/test")
 db=client['Hesparia']
-all_collections = db.list_collection_names()
+all_collections = db.list_collection_names() #TODO remove and consolodate with collections_dictionary
+collections_dictionary = {}
+for x in db.list_collection_names(): 
+    for y in db[x].find({}): 
+        collections_dictionary[x] = list(y.keys())
+print(collections_dictionary)
 
 # we need a custom json encoder because ObjectId is a type that jsonify doesnt like
 def customEncoder(o):
@@ -36,18 +41,18 @@ a8"     ""  88P'   "Y8  a8P_____88  ""     `Y8    88    a8P_____88
 "8a,   ,aa  88          "8b,   ,aa  88,    ,88    88,   "8b,   ,aa  
  `"Ybbd8"'  88           `"Ybbd8"'  `"8bbdP"Y8    "Y888  `"Ybbd8"' 
 '''
-@app.route('/api/v1/create/<collection_name>', methods=['GET', 'POST'])
+@app.route('/api/v1/create/<collection_name>/', methods=['GET', 'POST'])
 def create(collection_name):
     #print(collection_name)
-    #print(request.json)
+    # print(type(request.json))
     if not request.json: 
         abort(400)
-    if collection_name.title() in all_collections:
-        print("succ")
+    if collection_name.title() in all_collections: #TODO
+        #print("succ")
         col=db[collection_name.title()]
-        col.insert_one(request.json)
-        return(jsonify(message="success"))
-    print('no')
+        x = col.insert_one(request.json)
+        return(json.dumps(x.inserted_id, default=customEncoder))
+    #print('no')
     return("no")
     #return(request.json)
 
@@ -63,9 +68,9 @@ def create(collection_name):
 88           `"Ybbd8"'  `"8bbdP"Y8   `"8bbdP"Y8
 '''
 # Get all of a given collection
-@app.route('/api/v1/<collection_name>/all', methods=['GET'])
+@app.route('/api/v1/<collection_name>/all/', methods=['GET'])
 def get_all(collection_name):
-    if collection_name.title() in all_collections:
+    if collection_name.title() in all_collections: #TODO
         col=db[collection_name.title()].find()
         list_of_docs=[]
         for doc in col: 
@@ -74,17 +79,20 @@ def get_all(collection_name):
     else: 
         return("Error: "+collection_name+" not in db")
 
+
 #TODO
 # @app.route('/api/v1/property_search/<property_name>/<search_value>/', methods=['GET'])
 # def propertysearch(property_name, search_value):
 # http://127.0.0.1:5000/api/v1/propertysearch/name/Kobe
 # anything anywhere with name "Kobe"
 
+
 @app.route('/api/v1/property_collection_search/<collection_name>/<property_name>/<search_value>/', methods=['GET'])
 def property_search(collection_name, property_name, search_value):
-    # http://127.0.0.1:5000/api/v1/propertycollectionsearch/Person/Height/183cm
+    # Example: 
+    # http://127.0.0.1:5000/api/v1/property_collection_search/Person/Height/183cm
     # Anything in the collection "person" with "height" value == 183cm
-    if collection_name.title() in all_collections:
+    if collection_name.title() in all_collections: # TODO
         col = db[collection_name.title()].find()
         for doc in col:
             doc_keys = [x.lower() for x in doc.keys()]
@@ -123,11 +131,22 @@ a8"    `Y88  a8P_____88  88  a8P_____88    88    a8P_____88
 "8a,   ,d88  "8b,   ,aa  88  "8b,   ,aa    88,   "8b,   ,aa  
  `"8bbdP"Y8   `"Ybbd8"'  88   `"Ybbd8"'    "Y888  `"Ybbd8"'  
 '''
+# Delete an entry from everywhere
+# returns a dictionary ['collection'] = num of items deleted in that collection
+@app.route('/api/v1/delete/', methods=['POST', 'DELETE'])
+def delete_one():
+    if not request.json: 
+        abort(400)
 
-
-
-
-
+    # We are currently itterating through each item in the entire DB. Not ideal
+    deleted = {}
+    for collection in list(collections_dictionary.keys()):
+        try:
+            x = db[collection.title()].delete_many(request.json)
+            deleted[collection] = x.deleted_count
+        except: 
+            return("Object you attempt to delete must be in the correct format.")
+    return(json.dumps(deleted, default=customEncoder))
 
 
 #TODO 
