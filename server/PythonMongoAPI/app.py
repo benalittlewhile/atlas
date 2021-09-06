@@ -9,7 +9,11 @@ app = flask.Flask(__name__)
 app.config["DEBUG"] = True
 
 # set up the database access
-client = MongoClient("mongodb+srv://admin:atlasadmin1@cluster0.cwe5c.mongodb.net/test")
+from dotenv import load_dotenv
+import os
+load_dotenv()
+MONGODB_LOGIN_PATH = os.getenv('MONGODB_LOGIN_PATH')
+client = MongoClient(MONGODB_LOGIN_PATH)
 db=client['Hesparia']
 all_collections = db.list_collection_names() #TODO remove and consolodate with collections_dictionary
 collections_dictionary = {}
