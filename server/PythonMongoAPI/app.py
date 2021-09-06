@@ -67,7 +67,7 @@ def create(collection_name):
 88          "8b,   ,aa  88,    ,88  "8a,   ,d88  
 88           `"Ybbd8"'  `"8bbdP"Y8   `"8bbdP"Y8
 '''
-# Get all of a given collection
+# Get all docs of a given collection
 @app.route('/api/v1/<collection_name>/all/', methods=['GET'])
 def get_all(collection_name):
     if collection_name.title() in all_collections: #TODO
@@ -94,9 +94,9 @@ def property_search(collection_name, property_name, search_value):
     # Anything in the collection "person" with "height" value == 183cm
     if collection_name.title() in all_collections: # TODO
         col = db[collection_name.title()].find()
-        for doc in col:
+        for doc in col: # for each doc
             doc_keys = [x.lower() for x in doc.keys()]
-            if property_name.lower() in doc_keys:
+            if property_name.lower() in doc_keys: # IF PROPERTY IN 
                 if str(doc[property_name]) == search_value: 
                     print("succ")
                     return(json.dumps(doc, default=customEncoder))
