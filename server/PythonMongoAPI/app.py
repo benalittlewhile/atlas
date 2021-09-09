@@ -15,12 +15,22 @@ load_dotenv()
 MONGODB_LOGIN_PATH = os.getenv('MONGODB_LOGIN_PATH')
 client = MongoClient(MONGODB_LOGIN_PATH)
 db=client['Hesparia']
-all_collections = db.list_collection_names() #TODO remove and consolodate with collections_dictionary
-collections_dictionary = {}
-for x in db.list_collection_names(): 
-    for y in db[x].find({}): 
-        collections_dictionary[x] = list(y.keys())
-print(collections_dictionary)
+
+# Make a dictionary with key:value pairing where
+# key is the collection name e.g. Person
+# value is a list of properties that the collection has e.g. Name
+
+def update_collections_dictionary():
+    collections_dictionary = {}
+    for collection in db.list_collection_names(): 
+        collections_dictionary[collection] = []
+        for properties in db[collection].find({}): 
+            for property in properties.keys(): 
+                if property not in collections_dictionary[collection]: 
+                    collections_dictionary[collection].append(property)
+    return(collections_dictionary)
+
+collections_dictionary = update_collections_dictionary()
 
 # we need a custom json encoder because ObjectId is a type that jsonify doesnt like
 def customEncoder(o):
@@ -47,19 +57,30 @@ a8"     ""  88P'   "Y8  a8P_____88  ""     `Y8    88    a8P_____88
 '''
 @app.route('/api/v1/create/<collection_name>/', methods=['GET', 'POST'])
 def create(collection_name):
-    #print(collection_name)
-    # print(type(request.json))
+    # http://127.0.0.1:5000/api/v1/create/Person/
+    # creates a new document in the collection Person
     if not request.json: 
         abort(400)
-    if collection_name.title() in all_collections: #TODO
-        #print("succ")
+    if collection_name.title() in list(collections_dictionary.keys()): 
         col=db[collection_name.title()]
         x = col.insert_one(request.json)
         return(json.dumps(x.inserted_id, default=customEncoder))
-    #print('no')
-    return("no")
-    #return(request.json)
+    return(json.dumps("Error: "+collection_name+" not in db", default=customEncoder))
 
+
+@app.route('/api/v1/create_collection/<collection_name>/', methods=['GET', 'POST'])
+def create_collection(collection_name):
+    # http://127.0.0.1:5000/api/v1/create/Person/
+    # creates a new collection called Person
+    if not request.json: 
+        abort(400)
+    if collection_name.title() not in list(collections_dictionary.keys()): 
+        col=db[collection_name.title()]
+        x = col.insert_one(request.json)
+        print("done")
+        return(json.dumps("created "+ str(x.inserted_id)+ " in "+ collection_name, default=customEncoder))
+    else:
+        return(json.dumps("Error: "+collection_name+" already exists.", default=customEncoder))
 
 '''
                                              88  
@@ -71,10 +92,18 @@ def create(collection_name):
 88          "8b,   ,aa  88,    ,88  "8a,   ,d88  
 88           `"Ybbd8"'  `"8bbdP"Y8   `"8bbdP"Y8
 '''
+# Get all collections
+@app.route('/api/v1/collections/', methods=['GET'])
+def collections(): 
+    update_collections_dictionary
+    return json.dumps(list(collections_dictionary.keys()), default=customEncoder)
+
 # Get all docs of a given collection
 @app.route('/api/v1/<collection_name>/all/', methods=['GET'])
 def get_all(collection_name):
-    if collection_name.title() in all_collections: #TODO
+    # http://127.0.0.1:5000/api/v1/Person/all
+    # returns all documents in Person collection
+    if collection_name.title() in list(collections_dictionary.keys()):
         col=db[collection_name.title()].find()
         list_of_docs=[]
         for doc in col: 
@@ -84,11 +113,20 @@ def get_all(collection_name):
         return("Error: "+collection_name+" not in db")
 
 
-#TODO
-# @app.route('/api/v1/property_search/<property_name>/<search_value>/', methods=['GET'])
-# def propertysearch(property_name, search_value):
-# http://127.0.0.1:5000/api/v1/propertysearch/name/Kobe
-# anything anywhere with name "Kobe"
+@app.route('/api/v1/property_search/<property_name>/<search_value>/', methods=['GET', 'POST'])
+def property_search(property_name, search_value):
+    # http://127.0.0.1:5000/api/v1/propertysearch/name/Kobe
+    # anything anywhere with name "Kobe"
+    matches = []
+    for collection in collections_dictionary: 
+        if property_name in collections_dictionary[collection]: 
+            col=db[collection].find()
+            for doc in col: 
+                doc_keys = [x for x in doc.keys()]
+                if property_name in doc_keys: # IF PROPERTY IN 
+                    if str(doc[property_name]) == search_value: 
+                        matches.append(doc)
+    return json.dumps(matches, default=customEncoder)
 
 
 @app.route('/api/v1/property_collection_search/<collection_name>/<property_name>/<search_value>/', methods=['GET'])
@@ -96,7 +134,7 @@ def property_search(collection_name, property_name, search_value):
     # Example: 
     # http://127.0.0.1:5000/api/v1/property_collection_search/Person/Height/183cm
     # Anything in the collection "person" with "height" value == 183cm
-    if collection_name.title() in all_collections: # TODO
+    if collection_name.title() in list(collections_dictionary.keys()):
         col = db[collection_name.title()].find()
         for doc in col: # for each doc
             doc_keys = [x.lower() for x in doc.keys()]
@@ -123,6 +161,7 @@ def property_search(collection_name, property_name, search_value):
              88                                                        
              88                                                   
 '''
+
 
 
 '''
@@ -156,31 +195,4 @@ def delete_one():
 #TODO 
 # THE REST OF CRUD (but creation first)
 
-
-
-# # unused
-# @app.route('/api/v1/person/', methods=['GET'])
-# def api_id():
-#     # Check if an ID was provided as part of the URL.
-#     # If ID is provided, assign it to a variable.
-#     # If no ID is provided, display an error in the browser.
-#     if 'id' in request.args:
-#         id = int(request.args['id'])
-#     else:
-#         return "Error: No id field provided. Please specify an id."
-
-#     # Create an empty list for our results
-#     results = []
-
-#     # Loop through the data and match results that fit the requested ID.
-#     # IDs are unique, but other fields might return many results
-#     for book in books:
-#         if book['id'] == id:
-#             results.append(book)
-
-#     # Use the jsonify function from Flask to convert our list of
-#     # Python dictionaries to the JSON format.
-#     return jsonify(results)
-
 app.run() #use_reloader=False, threaded=True
-
