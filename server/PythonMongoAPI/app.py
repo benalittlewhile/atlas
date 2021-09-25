@@ -130,7 +130,7 @@ def property_search(property_name, search_value):
 
 
 @app.route('/api/v1/property_collection_search/<collection_name>/<property_name>/<search_value>/', methods=['GET'])
-def property_search(collection_name, property_name, search_value):
+def property_collection_search(collection_name, property_name, search_value):
     # Example: 
     # http://127.0.0.1:5000/api/v1/property_collection_search/Person/Height/183cm
     # Anything in the collection "person" with "height" value == 183cm
